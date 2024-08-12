@@ -1,0 +1,252 @@
+---
+title: 'Speech Enhancement Project'
+date: 2024-08-12
+permalink: /posts/speech_enhancement
+tags:
+  - Transformers
+  - Self-Attention
+  - U-Net
+  - Speech Enhancement
+---
+
+<div class="project-description">
+  <h2>Speech Enhancement Using Transformers and U-Net</h2>
+  <p>This project utilizes a hybrid architecture combining U-Net and Transformer models for speech enhancement. The model is trained to remove various types of noise from audio signals, enhancing the clarity and quality of speech. We have tested the model on several noise conditions, demonstrating its effectiveness across different environments.</p>
+</div>
+
+<div class="audio-samples">
+  <h3>Audio Samples</h3>
+  <br/>
+  <!-- Table Header -->
+  <div class="audio-header">
+    <div class="header-item"><strong>Noisy Audio</strong></div>
+    <div class="header-item"><strong>Clean Audio</strong></div>
+    <div class="header-item"><strong>Generated Audio</strong></div>
+  </div>
+
+  <!-- Sample 1: Public Space Noise -->
+  <h4>Public Space Noise</h4>
+  <div class="audio-pair">
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/noisy/public_space_8.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/clean/public_space_8.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/generated/public_space_8.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+  </div>
+
+  <div class="audio-pair">
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/noisy/public_space_7.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/clean/public_space_7.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/generated/public_space_7.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+  </div>
+
+  <div class="audio-pair">
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/noisy/public_space_6.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/clean/public_space_6.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/generated/public_space_6.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+  </div>
+
+  <!-- Sample 2: Office Noise -->
+  <h4>Office Noise</h4>
+  <div class="audio-pair">
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/noisy/office_noise_4.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/clean/office_noise_4.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/generated/office_noise_4.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+  </div>
+
+  <div class="audio-pair">
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/noisy/office_noise_2.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/clean/office_noise_2.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/generated/office_noise_2.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+  </div>
+
+  <div class="audio-pair">
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/noisy/office_noise_3.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/clean/office_noise_3.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/generated/office_noise_3.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+  </div>
+
+  <!-- Sample 2: Music Noise -->
+  <h4>Music Noise</h4>
+  <div class="audio-pair">
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/noisy/music_3.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/clean/music_3.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/generated/music_3.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+  </div>
+
+  <div class="audio-pair">
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/noisy/music_4.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/clean/music_4.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/generated/music_4.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+  </div>
+
+  <div class="audio-pair">
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/noisy/music_2.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/clean/music_2.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+    <div class="audio-item">
+      <audio controls>
+        <source src="{{ site.baseurl }}/assets/audio/generated/music_2.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+  </div>
+
+  <!-- Repeat for other audio samples -->
+</div>
+
+<style>
+.project-description {
+  margin-bottom: 20px;
+}
+
+.audio-header, .audio-pair {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.header-item, .audio-item{
+  flex: 1;
+  text-align: center;
+}
+
+.audio-item audio {
+  width: 100%;
+}
+
+.audio-item {
+  padding-right: 50px;
+}
+
+h4 {
+  margin-top: 30px;
+}
+</style>
