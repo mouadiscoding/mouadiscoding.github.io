@@ -10,7 +10,7 @@
 locale                   : "en-US"
 title                    : "Mouad's Homepage"
 title_separator          : "-"
-name                     : &name "TALEB Mouad"
+name                     : &name "Mouad Taleb"
 description              : &description "personal description"
 url                      : https://mouadiscoding.github.io # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
 baseurl                  : "" # the subpath of your site, e.g. "/blog"
@@ -22,8 +22,8 @@ repository               : "mouadiscoding/mouadiscoding.github.io"
 author:
   # Biographic information
   avatar           : "profile.png"
-  name             : "TALEB Mouad"
-  pronouns         : # example: "she/her"  
+  name             : "Mouad Taleb"
+  pronouns         : # he/him  
   bio              : "Data Scientist | ML Engineer | Software Engineer"
   location         : "Rabat, Morocco"
   employer         : # "Red Brick University"
@@ -44,6 +44,7 @@ author:
   codepen          : # Username
   dribbble         : # Username
   github           : "mouadiscoding"
+  huggingface      : "Mouad918"
   kaggle           : # Username  
   stackoverflow    : # User number or user number and name (i.e., use "1" or "1/jeff-atwood")    
 
@@ -57,7 +58,7 @@ author:
   keybase          : # Username
   instagram        : # Username
   lastfm           : # Username
-  linkedin         : # Username
+  linkedin         : mouad-taleb-90538625a
   mastodon         : # URL
   medium           : # URL
   pinterest        : # Username
@@ -300,6 +301,7 @@ plugins:
   - jekyll-gist
   - jekyll-feed
   - jekyll-redirect-from
+  - jekyll-toc
 # mimic GitHub Pages with --safe
 whitelist:
   - jekyll-paginate

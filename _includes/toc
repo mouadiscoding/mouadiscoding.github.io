@@ -1,7 +1,136 @@
-<aside class="sidebar__right">
-<nav class="toc" markdown="1">
-<header><h4 class="nav__title"><i class="fa fa-{{ include.icon | default: 'file-text' }}"></i> {{ include.title | default: site.data.ui-text[site.locale].toc_label }}</h4></header>
-*  Auto generated table of contents
-{:toc .toc__menu}
-</nav>
-</aside>
+<div class="toc-container">
+    <button class="toc-toggle">
+      <span class="toc-icon">▶</span> Table of Contents
+    </button>
+    <div class="toc-content" style="display: none;">
+      <div id="toc-list">
+        
+      </div>
+    </div>
+</div>
+  
+  <style>
+  .toc-container {
+    background-color: #f7f7f7;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 5px;
+  }
+  
+  .toc-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .toc-icon {
+    margin-right: 5px;
+  }
+  
+  .toc-content {
+    margin-top: 10px;
+  }
+  
+  .toc-content ul {
+    list-style-type: disc;
+    padding-left: 50px;
+    padding-top: 0px;
+    margin-bottom: 5px; /* Remove margin between <ul> elements */
+    padding-bottom: 0; /* Remove extra padding */
+  }
+  
+  .toc-content ul ul {
+    list-style-type: circle;
+    padding-left: 20px;
+    margin-top: 15px;
+    margin-bottom: 0; /* Remove margin between <ul> elements */
+    padding-bottom: 0; /* Remove extra padding */
+  }
+
+  .toc-content li {
+    margin-bottom: 10px; /* Reduce space between <li> items */
+    line-height: 0.6; /* Reduce line-height to compress vertical spacing */
+  }
+
+  #toc-list {
+  padding-left: 0;
+  margin: 0;
+  }
+
+  #toc-list a {
+  text-decoration: none; /* Remove underline */
+  color: inherit; /* Inherit color from parent or set specific color */
+  font-size: 16px;
+  }
+
+  #toc-list a:hover {
+    text-decoration: none; /* Ensure no underline on hover */
+    text-decoration: underline;
+  }
+  </style>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Function to create TOC
+      function createTOC() {
+    var toc = document.getElementById('toc-list');
+    var headers = document.querySelectorAll('h2, h3');
+    var tocStack = [];
+    var currentList = toc;
+    var lastLevel = 2;
+
+    headers.forEach(function(header) {
+      var headerText = header.innerText;
+      var headerId = headerText.toLowerCase().replace(/[^\w]+/g, '-'); // Convert to slug
+      header.id = headerId; // Set id for the header
+
+      var level = parseInt(header.tagName.substring(1));
+      var tocItem = document.createElement('li');
+      var tocLink = document.createElement('a');
+      tocLink.href = '#' + headerId;
+      tocLink.innerText = headerText;
+      tocItem.appendChild(tocLink);
+
+      if (level === 2) {
+        // Handling <h2> headers
+        currentList = document.createElement('ul');
+        toc.appendChild(currentList);
+        currentList.appendChild(tocItem);
+        tocStack.push(currentList);
+        lastLevel = 2;
+      } else if (level === 3) {
+        // Handling <h3> headers
+        if (tocStack.length > 0) {
+          var lastList = tocStack[tocStack.length - 1];
+          var subList = lastList.querySelector('ul');
+          if (!subList) {
+            subList = document.createElement('ul');
+            lastList.appendChild(subList);
+          }
+          subList.appendChild(tocItem);
+          currentList = subList; // Update currentList to the new sublist
+        }
+      }
+    });
+  }
+    
+      // Initialize TOC
+      createTOC();
+    
+      // Toggle TOC visibility
+      document.querySelector('.toc-toggle').addEventListener('click', function() {
+        var content = document.querySelector('.toc-content');
+        var icon = document.querySelector('.toc-icon');
+        if (content.style.display === 'none') {
+          content.style.display = 'block';
+          icon.textContent = '▼';
+        } else {
+          content.style.display = 'none';
+          icon.textContent = '▶';
+        }
+      });
+    });
+    </script>

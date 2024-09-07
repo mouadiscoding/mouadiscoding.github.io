@@ -1,0 +1,23 @@
+---
+permalink: /
+title: "Mouad's Blog"
+author_profile: true
+redirect_from: 
+  - /about/
+  - /about.html
+---
+
+<h2>About Me 🌟</h2>
+
+Welcome to my personal blog! I am a passionate Data Scientist and Software Engineer with an interest in solving problems through 
+data-driven solutions. With experience in building machine learning models and developing robust software systems, 
+I aim to explore and share insights on the latest technologies, research, and projects that inspire me.
+
+<h2>Blog Posts 📚</h2>
+
+Here are some of the latest posts that you might find interesting </br>
+
+{% for post in site.posts %}
+  {% include archive-single.html %}
+  </br>
+{% endfor %}

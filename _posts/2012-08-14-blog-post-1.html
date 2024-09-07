@@ -1,240 +1,562 @@
 ---
-title: 'Speech Enhancement Project'
-date: 2024-08-12
+title: 'Supervised Speech Enhancement with Self-Attention'
+date: 2024-09-07
 permalink: /posts/speech_enhancement
 tags:
   - Transformers
   - Self-Attention
-  - U-Net
   - Speech Enhancement
+  - Deep learning
+  - AI
+excerpt: "This article introduces a Deep Generative Speech Enhancement model that utilizes a hybrid architecture combining U-Net 
+and Transformer models. The model is trained in a supervized manner to remove various types of 
+noise from audio signals, enhancing the clarity and quality of speech. We have tested the model on 
+several noise conditions, demonstrating its effectiveness across different environments."
 ---
 
+{% include toc %}
+
+<h2>About This Article</h2>
+
 <div class="project-description">
-  <h2>Speech Enhancement Using Transformers and U-Net</h2>
-  <p>This project utilizes a hybrid architecture combining U-Net and Transformer models for speech enhancement. The model is trained to remove various types of noise from audio signals, enhancing the clarity and quality of speech. We have tested the model on several noise conditions, demonstrating its effectiveness across different environments.</p>
+  <p>This article introduces a <strong>Deep Generative Speech Enhancement model</strong>  that utilizes a hybrid architecture combining the 
+    <em>U-Net Architecture</em> and <em>Transformers</em>. The model is trained in a supervized manner to remove various types of 
+    noise from audio signals, enhancing the clarity and quality of speech. We have tested the model on 
+    several noise conditions, demonstrating its effectiveness across different environments.</p>
+  <p>
+    Kicking things off with some audio samples, including noisy, clean, and generated examples. 
+    Then we get into the nuts and bolts of the model's architecture and the foundational paper used in its development.
+    Additionally, we discuss the training setup and loss function used before evaluating the model across various benchmarks and comparing
+    the obtained results with the most advanced state-of-the-art solutions, proving how the model excels at the task of Speech Enhancement. </br>
+    You can find the implementation from scratch using <strong>Pytorch</strong> <a href="https://github.com/mouadiscoding/speech_enhancement">Here</a>.
+  </p>
+
 </div>
 
-<div class="audio-samples">
-  <h3>Audio Samples</h3>
+<p class="highlighted-info">
+  Before diving right in, it would be a great idea to check out 
+  <a href="https://lilianweng.github.io/posts/2018-06-24-attention/">this awesome piece</a> on Transformers and The Attention Mechanism
+  written by one of the most insightful AI bloggers, Lilian Weng. Since these concepts form the backbone of the architecture used in the model we're using, 
+  getting familiar with them will make it a breeze to follow along with the rest of the article. </br>
+  Also, if you’re not familiar with Convolutions or Convolution Neural Networks (CNNs) in general,
+  here is a <a href="https://poloclub.github.io/cnn-explainer/">great resource</a> with good visualizations that explains how CNNs work.
+</p>
+
+  <h2>Audio Samples</h2>
   <br/>
-  <!-- Table Header -->
   <div class="audio-header">
     <div class="header-item"><strong>Noisy Audio</strong></div>
     <div class="header-item"><strong>Clean Audio</strong></div>
     <div class="header-item"><strong>Generated Audio</strong></div>
   </div>
 
-  <!-- Sample 1: Public Space Noise -->
-  <h4>Public Space Noise</h4>
-  <div class="audio-pair">
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/noisy/public_space_8.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/clean/public_space_8.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/generated/public_space_8.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
+  <div id="audio-samples-container"></div>
+
+
+  <h2>Introduction</h2>
+  <p>
+    <strong>Speech enhancement</strong> is crucial area of research in the field of signal processing, with applications in
+    improving the quality, clarity and intelligibility of speech signals in various environments. It involves
+    processes to reduce background noise, remove unwanted acoustic artifacts, and amplify desired
+    speech components. This technology finds applications in diverse fields such as telecommunications,
+    hearing aids, speech recognition systems, audio/video conferencing, and broadcast media. <strong>[1] [2]</strong> </br>
+    Traditional signal processing methods, such as <em>spectral subtraction</em> <strong>[3]</strong> and <em>Wiener filtering</em> <strong>[4]</strong>, are
+    required to produce an estimate of noise spectra and then the clean speech given the additive noise
+    assumption. These methods work well with stationary noise process, but may not generalize well to
+    nonstationary or structured noise types such as dogs barking, baby crying, or traffic horn.
+    Recent advances in deep learning have led to significant improvements in speech enhancement
+    performance. However, there is still much to explore in terms of model architectures and training
+    approaches. <br>
+    The model in question is based on a supervised approach described in the paper 
+    <em>"Speech Denoising in the Waveform Domain with Self-Attention" by Kong et al</em>. This method, called <em>CleanUNet</em>, 
+    operates directly on raw waveforms and leverages <strong>self-attention mechanisms</strong> to refine bottleneck representations in the U-Net network. <strong>[5]</strong> </br>
+    The primary goal of the CleanUNet model is to effectively remove background noise from recorded
+    speech while maintaining the perceptual quality and intelligibility of the speech signals. 
+    This model addresses the limitations of traditional signal processing methods by utilizing the increased computational power of deep neural networks to achieve state-of-the-art results in
+    speech enhancement. </br>
+    The architecture of CleanUNet consists of three main components: an encoder, a bottleneck with
+    self-attention blocks, and a decoder. The encoder compresses the input waveform into a lowerdimensional representation -- an embedding, which is then refined by the self-attention blocks in the bottleneck.
+    Finally, the decoder reconstructs the denoised waveform from the refined representation. The model uses
+    causal convolutions to ensure low-latency processing, making CleanUNet suitable for real-time applications. </br> </br>
+
+
+    The following sections will cover the model's architecture, the training supervision strategies, 
+    and the loss functions used to optimize its performance.</br>
+    Furthermore the model will be benchmarked on the VoiceBank + Demand dataset <strong>[6]</strong> using various
+    objective metrics (e.g. <strong>PESQ [7]</strong>). This evaluation will include a comparison with 
+    other state-of-theart models to demonstrate how the model outperforms them on various benchmarks.
+  </p>
+
+  <h2>The Model's Architecture</h2>
+  <h3>Problem Setting</h3>
+  The end goal is to have a model that can denoise speech collected from a single channel microphone
+  (mono audio). The model is causal for online streaming applications. A causal model only uses past
+  and present information to make predictions, never future information. In the context of audio
+  processing, this means the model only uses audio samples up to the current time to process or
+  generate output.
+
+  More formally, let $\mathbf{x}_\text{noisy} \in \mathbb{R}^T$ be the observed noisy speech waveform of length of length $T$.
+  We assume the noisy speech is a mixture of clean speech $\mathbf{x}$ and background noise $\mathbf{x}_\text{noise}$ of the same lenght:
+  $\mathbf{x}_\text{noisy} = \mathbf{x} + \mathbf{x}_\text{noise}$. The goal is to obtain a denoiser function $f$ such that: <br>
+
+  <ol>
+    <li>$\hat{\mathbf{x}} = f(\mathbf{x}_\text{noisy}) \approx \mathbf{x}$</li>
+    <li>$f$ is causal: the $t$-th element of the output $\hat{\mathbf{x}_t}$ is only a function of the previous observation $\mathbf{x}_\text{1:t}$</li>
+  </ol>
+
+  <h3>The U-Net Architecture</h3>
+  The backbone architecture of the model is the U-Net architecture [8] [9]. </br> 
+  U-Net was introduced in the paper "U-Net: Convolutional Networks for Biomedical Image
+  Segmentation. This architecture was primarily developed to tackle the issue of limited
+  annotated data in the medical field, allowing for effective use of smaller datasets while maintaining
+  both speed and accuracy. </br>
+  U-Net's structure is distinctive, comprising two main components: a contracting path and an
+  expansive path. The contracting path, or encoder, captures contextual information and reduces the
+  spatial resolution of the input. Conversely, the expansive path, or decoder, reconstructs the data by
+  upsampling and integrates information from the contracting path through skip connections to
+  produce a segmentation map.
+  <div class="image-container">
+    <figure>
+      <img src="/images/unet.jpg" alt="U-Net Architecture">
+      <figcaption>Figure 1: U-Net Architecture. Source: <a href="https://www.geeksforgeeks.org/u-net-architecture-explained/">GeeksForGeeks</a></figcaption>
+    </figure>
   </div>
 
-  <div class="audio-pair">
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/noisy/public_space_7.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/clean/public_space_7.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/generated/public_space_7.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
+  In the contracting path, relevant features from the input image are identified. The encoder layers
+  execute convolutional operations that diminish the spatial resolution of the feature maps while
+  increasing their depth, enabling the capture of more abstract representations of the input. This
+  process is akin to the feedforward layers in other convolutional neural networks. The expansive path,
+  on the other hand, focuses on decoding the encoded data and accurately locating features while
+  restoring the spatial resolution. The decoder layers upsample the feature maps and perform
+  convolutional operations. Skip connections from the contracting path preserve spatial information
+  lost during encoding, aiding the decoder layers in accurately locating features.
+  
+  <h3>The Encoder and Decoder</h3> </br>
+  <strong><font size="3.75">Encoder</font></strong> </br>
+  The encoder has $D$ layers, where $D$ is the depth of the encoder. Each encoder layer is composed of a
+  strided 1-d convolution (one dimensional Convolution, Conv1d) followed by the rectified linear unit (ReLU) and a 1x1 convolution
+  (Conv1×1) followed by the gated linear unit (GLU). </br>
+  The Rectified Linear Unit (ReLU) function is one of the most commonly used activation functions in
+  neural networks. Its primary purpose is to introduce non-linearity into the model while maintaining
+  computational efficiency. The ReLU function is defined as follows:
+  $$ \text{ReLU}(\mathbf{x}) = \max(0, \mathbf{x}) $$
+  The Gated Linear Unit (GLU) is an activation function that combines two linear transformations and a
+  sigmoid activation function to modulate the input. The GLU function can be defined as follows:
+  $$ \text{GLU}(\mathbf{x}) = (\mathbf{x} \cdot W_1 + b_1) \odot \sigma(\mathbf{x} \cdot W_2 + b_2) $$
+  where: </br>
+  <ul>
+    <li>$W_1$ and $W_2$ are weight matrices.</li>
+    <li>$b_1$ and $b_2$ are bias vectors.</li>
+    <li>$\sigma$ is the sigmoid activation function.</li>
+    <li>$\odot$ denotes element-wise multiplication.</li>
+  </ul>
+  The Conv1d down-samples the input in length and increases the number of channels. The Conv1d in
+  the first layer outputs $H$ channels, where $H$ controls the capacity of the model, and Conv1d’s in other
+  layers double the number of channels. Each Conv1d has kernel size $K$ and stride $S = \frac{K}{2}$. Each
+  Conv1×1 doubles the number of channels because GLU halves the channels. All 1-d convolutions are
+  causal. </br>
+  In causal convolutions, each output value depends only on the current and previous input values, not on future values. 
+  This is achieved by ensuring that the convolutional kernel only interacts with the past and present values, adhering to the causality constraint.</br>
+  A 1-d convolution operation involves sliding a filter (or kernel) over a one-dimensional input sequence, performing element-wise multiplication, and summing the results to produce an output sequence. </br>
+  Formally, for a 1-d causal convolution with kernel $K$ and input $\mathbf{x}$, the output $y$ at time step $t$ is:
+  $$ y(t) = \displaystyle\sum_{i=0}^\text{k-1}\mathbf{x}(t-i) K(i),$$
+  where $k$ is the kernel size and $K(i)$ the kernel weights at position $i$. $\mathbf{x}(t-i)$ refers to the input at time
+  $(t-i)$, ensuring that future values are not included in the computation. To maintain the length of the output sequence equal 
+  to the input sequence length, causal convolutions use zero-padding on the left side of the input sequence.
+  </br> </br>
+  <strong><font size="3.75">Decoder</font></strong> </br>
+  The decoder has $D$ decoder layers, same as the encoder. Each decoder layer is paired with the
+  corresponding encoder layer in the reversed order; for instance, the last decoder layer is paired with
+  the first encoder layer. Each pair of encoder and decoder layers are connected via a skip connection.
+  For each downsampling step, the output feature maps are saved. When the network reaches the
+  corresponding upsampling step in the expansive path, these saved feature maps are concatenated
+  with the upsampled feature maps. This concatenation merges high-resolution information from the
+  encoder with the low-resolution feature maps being refined in the decoder.
+  Each decoder layer is composed of a Conv1×1 followed by GLU and a transposed 1-d convolution (ConvTranspose1d). </br>
+  The transposed convolution increases the size of the input sequence by inserting zeros between elements and then applying a convolution-like operation with a learnable kernel.
+  The ConvTranspose1d in each decoder layer is causal and has the same hyperparameters as the Conv1d in the paired encoder layer, except that the number of input and output
+  channels are reversed. </br>
+  For a 1-d transposed convolution with a causal constraint, the operation involves spreading the input sequence and applying the kernel, 
+  while respecting the causality constraint. The result is an upsampled sequence. </br>
+  More formally, Given an input sequence $\mathbf{x}$ of length $L$ and a kernel $k$ of length $K$, the causal 1-d transposed convolution
+  can be represented as:
+  $$ y(t) = \sum_{i=0}^{\min(t, L-1)} x(i) \cdot k(t - i) $$
+
+  <h3>The Bottleneck</h3>
+  To refine the bottleneck, we use masked self-attention to enhance the model's ability to capture
+  long-range dependencies in the speech signal, which helps in distinguishing between speech and
+  noise. </br>
+  Masked self-attention is a variant where a mask is applied to ensure that the model does not attend
+  to future time steps adhering to the causality constraint necessary for real-time processing. </br>
+  The mask is an upper triangular matrix that masks out the future time steps (i.e., sets their attention
+  scores to negative infinity so that the SoftMax function gives them zero weight). The modified
+  attention mechanism can be expressed as:
+  $$\text{MaskedAttention(K,Q,V)} = \text{Softmax}\left(\frac{QK^T + M}{\sqrt{d_k}}\right) \cdot V$$
+  Where $M$ is the mask matrix, $M_\text{ij} = -\infty$ if $i \gt j$ and $M_\text{ij} = 0$ otherwise. </br>
+  The bottleneck is composed of $N$ self-attention blocks. Each self-attention block is composed of a
+  multihead self-attention layer and a position-wise fully connected layer. The position-wise fully
+  connected layer applies a fully connected neural network independently to each position (or time
+  step) of the input sequence. </br>
+  Unlike traditional fully connected layers that connect all neurons across different positions, the
+  position-wise layer operates on each position separately, allowing the model to process information
+  locally at each time step while maintaining the sequence's overall structure.
+  <div class="image-container">
+    <figure>
+      <img src="/images/cleanunet.png" alt="CleanUNet">
+      <figcaption>Figure 2: CleanUNet Architecture <a href="https://arxiv.org/pdf/2202.07790">Zhifeng Kong et al.</a></figcaption>
+    </figure>
   </div>
 
-  <div class="audio-pair">
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/noisy/public_space_6.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/clean/public_space_6.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/generated/public_space_6.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
+  <h2>The Loss Function</h2>
+  The loss function quantifies the error or difference between the generated speech and the actual clean speech, guiding the learning process
+  during training. </br>
+  A simple loss function would be the $l_1$ loss on waveform, the first order norm of the difference
+  between the clean speech $x$ and the generated speech $\hat{\mathbf{x}} = f(\mathbf{x_\text{noisy}})$,
+  formally $ \lVert \mathbf{x} - \hat{\mathbf{x}} \rVert_1 $.
+  With the model trained with $l_1$ loss, the silence part of the generated audio is clean, but the high frequency
+  bands are not accurate. </br>
+  Another loss function that could be defined is an <strong>STFT loss</strong> between clean speech and the denoised
+  speech. </br>
+  </br>
+  <div class="collapsible-container">
+    <button class="collapsible-toggle">
+      <span class="collapsible-icon">▶</span> STFT?? Click here to read more!
+    </button>
+    <div class="collapsible-content" style="display: none;">
+      Sound can be represented in two primary forms: as a <strong>waveform</strong> in the time domain and as a <strong>frequency spectrum</strong>
+      in the frequency domain. Each representation has its uses, and transforming between them helps analyze and process sound signals effectively.
+      </br> </br>
+      <strong><font size="4">Waveform</font></strong> </br> </br>
+      The waveform representation plots the sample values over time and illustrates the changes in the
+      sound’s amplitude. This is also known as the time domain representation of sound.
+      This type of visualization is useful for identifying specific features of the audio signal such as the
+      timing of individual sound events, the overall loudness of the signal, and any irregularities or noise
+      present in the audio. </br>
+      Formally, a sound signal can be represented as a waveform $x(t)$ which is a function of time. 
+      In digital form, it is sampled at discrete time steps and becomes $x[n]$, where $n$ is the index of the sample. </br>
+      $x(t)$ is converted into a discrete signal by sampling at intervals $T_s$ (sampling period), and the discrete representation is:
+      $$ x[n] = x(nT_s) \quad \text{for } n \in \mathbb{Z} $$
+      <div class="image-container">
+        <figure>
+          <img src="/images/SSE/waveform.png" alt="WaveForm Plot">
+          <figcaption>WaveForm Plot. Source: <a href="https://huggingface.co/learn/audio-course/en/chapter1/audio_data">HuggingFace Audio Course</a></figcaption>
+        </figure>
+      </div>
+      </br>
+      This is an example of a trumpet sound. This visualization plots the amplitude of the signal on the yaxis and time along the x-axis. In other words, each point corresponds to a single sample value that
+      was taken when this sound was sampled. </br> </br>
+      <strong><font size="4">Frequency Spectrum</font></strong> </br> </br>
+      The frequency spectrum of a signal reveals which frequencies are present in the signal and their
+      respective magnitudes (and phases, if phase information is included). For a time-domain signal $x[n]$,
+      the frequency spectrum shows the amplitude of each frequency component in the signal.
+      The spectrum is computed using <strong>the discrete Fourier transform</strong> or <strong>DFT</strong>. 
+      The <strong>DFT</strong> converts a discretetime signal from the time domain to the frequency domain. It computes a finite set of frequency
+      components from a finite number of samples of the signal. </br>
+      Mathematically, for a discrete-time signal $x[n]$ with $N$ samples, the DFT is defined as:
+      $$ X[k] = \sum_{n=0}^{N-1} x[n] \cdot e^{-j 2 \pi k n / N} \quad \text{for } k = 0, 1, \dots, N-1 $$
+      where $X[K]$ is the DFT coefficient for frequency bin $k$. </br>
+      To recover the time-domain signal from the frequency-domain components, we apply the <strong>Inverse Discrete Fourier Transform (IDFT):</strong>
+      $$ x[n] = \frac{1}{N} \sum_{k=0}^{N-1} X[k] \cdot e^{j 2 \pi k n / N} $$
+      <div class="image-container">
+        <figure>
+          <img src="/images/SSE/frequency.png" alt="Frequency Spectrum Plot">
+          <figcaption>Frequency Spectrum Plot. Source: <a href="https://huggingface.co/learn/audio-course/en/chapter1/audio_data">HuggingFace Audio Course</a></figcaption>
+        </figure>
+      </div>
+      </br>
+      This is a frequency spectrum plot for the same trumpet sound, it shows the strength of the various
+      frequency components that are present in this audio segment. The frequency values are on the xaxis, usually plotted on a logarithmic scale, while their amplitudes are on the y-axis.
+      </br> </br>
+      <strong><font size="4">Short-Time Fourier Transform (STFT)</font></strong> </br> </br>
+      <strong>The Discrete Fourier Transform (DFT)</strong> provides the frequency components of the entire signal but doesn’t capture time-localized 
+      frequency changes, the spectrum only shows a frozen snapshot of the frequencies at a given instant. </br>
+
+
+      To analyze how the frequency content evolves over time, we use the <strong>Short-Time Fourier Transform (STFT).</strong>
+
+      The signal is divided into short overlapping frames or segments, typically lasting a few milliseconds.
+      This is done to analyze the signal in shorter, manageable pieces because the frequency content of a
+      signal can change over time. Then a window function (e.g., Hamming, Hanning) is applied to each
+      segment to reduce edge effects and minimize discontinuities at the boundaries. For each windowed
+      segment, we compute the Fourier Transform to obtain the frequency content. The Fourier Transform
+      converts the time-domain signal into the frequency domain, giving a complex-valued output that
+      represents both magnitude and phase.
+      STFT segments the signal into shorter overlapping windows and applies the DFT to each segment. This produces a two-dimensional time-frequency representation.
+      Given a signal $x[n]$, we multiply it by a window function $w[n]$  typically a Hann or Hamming window, which selects a portion of the signal. The STFT is computed as:
+      $$ STFT(x, m, k) = \sum_{n=0}^{N-1} x[n] \cdot w[n - m] \cdot e^{-j 2 \pi k n / N} $$
+      where $m$ is the time index, and $k$ is the frequency index, and $w[n]$ is the window function. </br>
+
+      The resulting spectra are then stacked together on the time axis to create the spectrogram. Each
+      vertical slice in this image corresponds to a single frequency spectrum, seen from the top. </br>
+      The STFT provides a <strong>Spectrogram</strong> which is a visual representation of the magnitude of the STFT coefficients
+      $ \vert STFT(x, m, k) \vert $ , showing how the signal’s frequency content changes over time. </br>
+      The window function controls how much of the signal is analyzed at a time. The window length affects the resolution: 
+      A longer window gives better frequency resolution but worse time resolution, 
+      whereas a shorter window gives better time resolution but worse frequency resolution. </br>
+      In practice, we compute the FFT or the Fast Fourier Transform instead of the STFT for time
+      complexity reasons. The FFT has the same steps as the STFT, but instead of computing the Fourier
+      Transform for each window, we apply an efficient algorithm to compute the Discrete Fourier
+      Transform (DFT). The most common algorithm used is the <strong>Cooley–Tukey algorithm</strong> <strong>[11]</strong>. </br>
+      The FFT algorithm reduces the computational complexity of calculating the DFT from $O(N^2)$ (Where $N$ is the number of samples)
+      to $O(N\log(N))$. This makes it feasible to compute the STFT for large datasets and long signals efficiently.
+      <div class="image-container">
+        <figure>
+          <img src="/images/SSE/spectrogram.png" alt="Spectrogram">
+          <figcaption>Spectrogram plot. Source: <a href="https://huggingface.co/learn/audio-course/en/chapter1/audio_data">HuggingFace Audio Course</a></figcaption>
+        </figure>
+      </div>
+      In this plot, the x-axis represents time as in the waveform visualization but now the y-axis represents
+      frequency in Hz. The intensity of the color gives the amplitude or power of the frequency component
+      at each point in time, measured in decibels (dB).
     </div>
   </div>
+  </br>
+  Let $s(\mathbf{x}, \theta) = \vert STFT(\mathbf{x}) \vert$ be the magnitude of the linear-scale spectrogram of $\mathbf{x}$,
+  where $\theta$ represents the hyperparameters of the STFT including the window length and hop size (the amount of overlap between consecutive windows or frames).</br>
+  The STFT loss <strong>[10]</strong> is defined as 
+  $$ \mathrm{M\text{-}STFT}(\mathbf{x},\hat{\mathbf{x}}) = \sum_{i=1}^m \left( \frac{\|s(\mathbf{x};\theta_i)-s(\hat{\mathbf{x}};\theta_i)\|_F}{\|s(\mathbf{x};\theta_i)\|_F} \right. + \left. \frac{1}{T} {\left\|\log \frac{s(\mathbf{x};\theta_i)}{s(\hat{\mathbf{x}};\theta_i)}\right\|_1} \right) $$
+  Where $m$ is the number of resolutions and $\theta_i$ is the STFT parameter for each resolution. </br>
+  This model trained on the STFT loss alone leads to generating low-frequency noises on the silent part of the denoised speech. </br>
+  As a result, a high-band multi-resolution STFT loss was defined. Let $s_h(\mathbf{x})$ only contain the second
+  half number of rows of $s(\mathbf{x})$ (e.g., 4kHz to 8kHz range of the frequency bands for 16kHz audio). Then,
+  the high-band STFT loss $\mathrm{M\text{-}STFT}_h(\mathbf{x},\hat{\mathbf{x}})$ is defined by substituting by $s(.)$ with $s_h(.)$. </br>
+  Finally, by combining the $l_1$ loss and the $\mathrm{M\text{-}STFT}(\mathbf{x},\hat{\mathbf{x}})$ loss, we end up a loss function optimized for
+  reducing noise for both high and low frequency parts of the speech.</br>
+  The final loss function is defined as followed:
+  $$ \text{Loss} = \frac{1}{2} \mathrm{M\text{-}STFT}_h(\mathbf{x},\hat{\mathbf{x}}) + \lVert \mathbf{x} - \hat{\mathbf{x}} \rVert_1 $$
 
-  <!-- Sample 2: Office Noise -->
-  <h4>Office Noise</h4>
-  <div class="audio-pair">
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/noisy/office_noise_4.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/clean/office_noise_4.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/generated/office_noise_4.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
+  <h2>Training Setup</h2>
+  The model was trained for 3000 epochs in a supervised manner using the VoiceBank + Demand dataset through a custom training function. 
+  This function manages environment setup, data loading, model and optimizer definition, checkpoint management, and training progress logging.
+  <h3>The model </h3>
+  The encoder and decoder have a depth of 8 layers, with each layer featuring a hidden dimension of 64, a stride of 2, 
+  and a kernel size of 4. The bottleneck contains 5 attention blocks, each with 8 heads, a model dimension of 512, and a middle dimension of 2048.
+
+  <h3>Data Preparation</h3>
+  The dataset [6] utilized for training and testing the speech enhancement model is derived from the
+  Voice Bank corpus [12] and supplemented with noise recordings from the Demand database [13]. It
+  includes speech from 28 speakers from England (14 male, 14 female) each providing around 400
+  sentences sampled at 48 kHz, with orthographic transcriptions. To create the noisy training data, ten
+  noise types were used: two artificial noises (speech-shaped noise and babble) and eight real noises
+  from the Demand database, including domestic noise (inside a kitchen), office noise (in a meeting
+  room), public space noises (cafeteria, restaurant, subway station), transportation noises (car and
+  metro), and street noise (busy traffic intersection), combined at SNR levels of 15 dB, 10 dB, 5 dB, and
+  0 dB, resulting in 40 different noisy conditions per speaker. </br>
+  For testing, data from two additional speakers (one male, one female) from England were combined
+  with five different noises from the Demand database at SNR levels of 17.5 dB, 12.5 dB, 7.5 dB, and
+  2.5 dB, including domestic noise (living room), office noise (office space), transportation noise (bus),
+  and street noises (open area cafeteria and public square), creating 20 different noisy conditions.
+  Noise was added to clean waveforms, which were normalized and trimmed of silence longer than
+  200ms, using the ITU-T P.56 method [14] to calculate active speech levels. To train the model, all
+  samples were resampled to 16 kHz. This comprehensive dataset provides diverse acoustic conditions,
+  enhancing the model's robustness and generalization capabilities. </br>
+  The dataset is split into training and validation sets to monitor the model's performance during
+  training and prevent overfitting. 90% of the dataset was used for training and 10% of it was used as a
+  validation split.
+
+  <h3>Optimizer</h3>
+  The optimizer’s role is to adjust the model's parameters (weights and biases) in order to minimize the loss function. </br>
+  For our case, we used the Adam (Adaptive Moment Estimation) optimizer which is a popular
+  optimization algorithm in deep learning. Adam combines the advantages of two other extensions of
+  stochastic gradient descent: AdaGrad and RMSProp, making it highly efficient and effective for
+  training deep neural networks. </br>
+
+  Adam features an adaptive learning rate, adjusting the rate for each parameter individually, which reduces sensitivity to initial settings 
+  and improves the optimization process. Adam employs first moment estimation $\beta_1$ by calculating the exponentially decaying average 
+  of past gradients to guide the update direction. Additionally, it utilizes second moment estimation $\beta_2$ by averaging past squared gradients, 
+  which helps to scale updates and mitigate the effects of large or small gradients. </br>
+  The Adam update rule is defined as follows: </br>
+  <ol>
+    <li>Compute the gradients $g_t$ at time step $t$: $g_t = \nabla_\theta J(\theta_t) $, where $\theta_t$ are the model's parameters
+      at time step $t$ and $\nabla_\theta J(\theta_t)$ is the gradient of the loss function $J(\theta_t)$ with respect to the parameters.
+    </li>
+    <li>Update biased first moment estimate $m_t$ : $m_t = \beta_t m_\text{t-1} + (1-\beta_t)g_t$</li>
+    <li>Update biased second moment estimate $v_t$ : $v_t = \beta_t v_\text{t-1} + (1-\beta_2) g_t^2$</li>
+    <li>Compute bias-corrected first moment estimate $\hat{m_t}$ : $\hat{m_t} = \frac{m_t}{1-\beta_1^t}$</li>
+    <li>Compute bias-corrected second moment estimate $\hat{v_t}$ : $\hat{v_t} = \frac{v_t}{1-\beta_2^t}$</li>
+    <li>Update the parameters: $\theta_\text{t+1} = \theta_t - \alpha \frac{\hat{m_t}}{\sqrt{\hat{v_t}} + \epsilon}$
+      where $\alpha$ is the learning rate and $\epsilon$ is a small constant to prevent division by zero
+    </li>
+  </ol>
+
+  the Adam optimizer in our case is used with momentum $\beta_1 = 0.9$ and denominator momentum $\beta_2 = 0.999$.
+  Linear warmup with cosine annealing learning rate schedule is also used with maximum learning rate = $ 2 \times 10^\text{-4} $
+  and warmup ratio of $5\%$. </br>
+  Linear warmup means that the learning rate is increased linearly from a small initial value to the maximum learning
+  rate over a specified number of steps (warmup ratio). Formally, $\alpha_t = \alpha_\text{max} \times \frac{t}{T_\text{warmup}} $ </br>
+  After the warmup phase, the learning rate  is decreased according to a cosine function (cosine annealing):
+  $$ \alpha_t = \alpha_\text{min} + \frac{1}{2} (\alpha_\text{max} - \alpha_\text{min}) (1 + \cos(\frac{\pi(t - T_\text{warmup})}{T_\text{total} - T_\text{warmup}})) $$
+ 
+  <h2>Evaluation and Benchmarking</h2>
+  
+  The model was evaluated on the test set using the following objective evaluation methods:
+  <ul>
+    <li><strong>Perceptual Evaluation of Speech Quality (PESQ) [7]</strong>: It compares the enhanced speech
+      signal with a reference clean signal and provides a score ranging from -0.5 to 4.5, with higher
+      values indicating better quality. PESQ uses a model of human auditory perception to predict
+      how a listener would perceive the quality of the speech signal, taking into account various
+      distortions and degradations.</li>
+    <li><strong>Short-Time Objective Intelligibility (STOI) [15]</strong>: STOI measures the intelligibility of speech,
+      which is how easily a listener can understand the speech signal. It provides a score between
+      0 and 1, with higher values indicating better intelligibility. STOI is based on a correlation
+      coefficient between temporal envelopes of clean and degraded speech signals in short time
+      frames. It focuses on the intelligibility aspect rather than the overall quality.</li>
+    <li><strong>Distortion of speech signal (CSIG)</strong>: CSIG evaluates the perceived quality of the speech signal
+      with a focus on the signal distortion. It ranges from 1 to 5, with higher scores indicating less
+      distortion. CSIG assesses how much the speech signal has been distorted during the
+      enhancement process, providing an indication of the signal fidelity.
+    </li>
+    <li>
+      <strong>SNR (Signal-to-Noise Ratio)</strong>: SNR is a measure of the ratio between the desired signal and
+      the background noise. It is expressed in decibels (dB), with higher values indicating a cleaner
+      signal. SNR quantifies the level of the speech signal relative to the noise, providing an
+      indication of how well the model reduces noise in the enhanced speech.
+    </li>
+    <li>
+      <strong>Background noise (CBAK)</strong>: CBAK evaluates the quality of the background noise suppression.
+      It ranges from 1 to 5, with higher scores indicating better noise suppression. CBAK focuses on
+      how well the model suppresses the background noise while preserving the speech signal.
+    </li>
+    <li>
+      <strong>Overall Quality (COVL)</strong>: COVRL provides an overall quality score of the enhanced speech,
+      considering both the speech signal and the background noise. It ranges from 1 to 5, with
+      higher scores indicating better overall quality. COVRL gives a holistic evaluation of the
+      enhanced speech, taking into account both the intelligibility and the naturalness of the
+      speech as well as the background noise suppression
+    </li>
+    <li>
+      <strong>Speech-to-Reverberation Modulation Energy Ratio (SRMR)</strong>: SRMR measures the amount of
+      reverberation in the speech signal. It provides a score where higher values indicate less
+      reverberation and better speech quality. SRMR focuses on the temporal modulation
+      characteristics of the speech signal and evaluates the amount of reverberation, which can
+      affect the clarity and intelligibility of the speech.
+    </li>
+  </ul>
+  Additionally, the model is compared to other state-of-the-art models to benchmark its
+  performance. This comparative analysis allows us to highlight the strengths and improvements of our
+  model relative to existing solutions in the field of speech enhancement. </br>
+  The numbers in boldface are the metrics where our model performs well compared to other state-of-the-art solutions.
+  </br> </br>
+  </br>
+  <table class="table table-bordered" style="text-align: center; vertical-align: middle;">
+    <thead>
+      <tr>
+        <th style="text-align: center; vertical-align: middle;">Model</th>
+        <th style="text-align: center; vertical-align: middle;">PESQ</th>
+        <th style="text-align: center; vertical-align: middle;">STOI (%)</th>
+        <th style="text-align: center; vertical-align: middle;">SNR (dB)</th>
+        <th style="text-align: center; vertical-align: middle;">CSIG</th>
+        <th style="text-align: center; vertical-align: middle;">CBAK</th>
+        <th style="text-align: center; vertical-align: middle;">COVL</th>
+        <th style="text-align: center; vertical-align: middle;">SRMR</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><div style="background-color: #FFFF00;">My Model</div></td>
+        <td><strong>3.10</strong></td>
+        <td><strong>95.61</strong></td>
+        <td><strong>19.52</strong></td>
+        <td>2.66</td>
+        <td><strong>3.41</strong></td>
+        <td>2.51</td>
+        <td>8.92</td>
+      </tr>
+      <tr>
+        <td>PESQetarian</td>
+        <td>3.82</td>
+        <td>84.01</td>
+        <td>-</td>
+        <td>-</td>
+        <td>2.49</td>
+        <td>3.5</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>SEMamba</td>
+        <td>3.69</td>
+        <td>96</td>
+        <td>-</td>
+        <td>4.79</td>
+        <td>3.63</td>
+        <td>4.37</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>CMGAN</td>
+        <td>3.41</td>
+        <td>96</td>
+        <td>11.10</td>
+        <td>4.63</td>
+        <td>3.94</td>
+        <td>4.12</td>
+        <td>-</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>References</h2>
+  <div class="references">
+    <ul>
+      <li>J. Benesty, S. Makino, J. Chen(ed). “Speech Enhancement. pp.1-8. Springer” (2005).</li>
+      <li>"The Speed Submission to DIHARD II: Contributions & Lessons Learned". arXiv:1911.02388 [eess.AS].</li>
+      <li>“Suppression of acoustic noise in speech using spectral subtraction,” IEEE Transactions on acoustics, speech, and signal processing, 1979.</li>
+      <li>“Enhancement and bandwidth compression of noisy speech,” Proceedings of the IEEE, vol. 67, no. 12, pp. 1586–1604, 1979.</li>
+      <li>“Speech Denoising in the Waveform Domain with Self-Attention”. arXiv:2202.07790</li>
+      <li>Cassia Valentini-Botinhao, et al. “Speech Enhancement for a Noise-Robust Text-to-Speech Synthesis System using Deep Recurrent Neural Networks”</li>
+      <li>ITU-T Recommendation, “Perceptual evaluation of speech quality (pesq): An objective method for end-to-end speech quality assessment of narrow-band telephone networks and speech codecs,” Rec. ITU-T P. 862, 2001.</li>
+      <li>Olaf Ronneberger et al., “U-Net: Convolutional networks for biomedical image segmentation,” in MICCAI, 2015.</li>
+      <li>Olivier Petit et al., “U-Net Transformer: Self and cross attention for medical image segmentation,” in International Workshop on Machine Learning in Medical Imaging, 2021.</li>
+      <li>Ryuichi Yamamoto et al., “Parallel WaveGAN: A fast waveform generation model based on generative adversarial networks with multi-resolution spectrogram,” in ICASSP, 2020.</li>
+      <li>Amente Bekele “Cooley-Tukey FFT Algorithms” (2016)</li>
+      <li>C. Veaux, J. Yamagishi, and S. King, “The voice bank corpus: Design, collection and data analysis of a large regional accent speech database,” in Proc. Int. Conf. Oriental COCOSDA, Nov 2013.</li>
+      <li>J. Thiemann, N. Ito, and E. Vincent, “The diverse environments multi-channel acoustic noise database: A database of multichannel environmental noise recordings,” J. Acoust. Soc. Am., vol. 133, no. 5, pp. 3591–3591, 2013.</li>
+      <li>Objective measurement of active speech level ITU-T recommendation P.56, ITU Recommendation ITU-T, Geneva, Switzerland, 1993.</li>
+      <li>Cees H Taal et al., “An algorithm for intelligibility prediction of time–frequency weighted noisy speech,” IEEE Transactions on Audio, Speech, and Language Processing, 2011.</li>
+    </ul>
   </div>
 
-  <div class="audio-pair">
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/noisy/office_noise_2.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/clean/office_noise_2.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/generated/office_noise_2.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-  </div>
-
-  <div class="audio-pair">
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/noisy/office_noise_3.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/clean/office_noise_3.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/generated/office_noise_3.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-  </div>
-
-  <!-- Sample 2: Music Noise -->
-  <h4>Music Noise</h4>
-  <div class="audio-pair">
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/noisy/music_3.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/clean/music_3.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/generated/music_3.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-  </div>
-
-  <div class="audio-pair">
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/noisy/music_4.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/clean/music_4.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/generated/music_4.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-  </div>
-
-  <div class="audio-pair">
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/noisy/music_2.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/clean/music_2.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-    <div class="audio-item">
-      <audio controls>
-        <source src="{{ site.baseurl }}/assets/audio/generated/music_2.wav" type="audio/wav">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-  </div>
-
-  <!-- Repeat for other audio samples -->
-</div>
 
 <style>
+
+.collapsible-container {
+  background-color: #f7f7f7;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 5px;
+  border: 1px solid #000000;
+}
+
+.collapsible-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.collapsible-icon {
+  margin-right: 5px;
+}
+
+.collapsible-content {
+  margin-top: 10px;
+  font-size: 16px;
+}
 .project-description {
   margin-bottom: 20px;
+  margin-top: 20px;
 }
 
 .audio-header, .audio-pair {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  grid-gap: 10px;
   margin-bottom: 20px;
 }
 
-.header-item, .audio-item{
-  flex: 1;
+.header-item, .audio-item {
   text-align: center;
 }
 
@@ -249,4 +571,122 @@ tags:
 h4 {
   margin-top: 30px;
 }
+
+.highlighted-info {
+  background-color: #f0f8ff; /* Light blue background */
+  border-left: 5px solid #4682b4; /* Blue border on the left */
+  padding: 15px;
+  color: #333;
+  font-size: 1em;
+  line-height: 1.6;
+  border-radius: 8px;
+}
+
+.references ul {
+    columns: 2; /* Creates the two columns */
+    -webkit-columns: 2;
+    -moz-columns: 2;
+    column-gap: 40px; /* Adjust the space between columns */
+    -webkit-column-gap: 40px; /* For WebKit browsers */
+    -moz-column-gap: 40px; /* For Mozilla browsers */
+    list-style-type: decimal; /* Numbered list */
+}
+
+.references li {
+    margin-bottom: 10px; /* Adds some space between the items */
+}
+
+.image-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center items horizontally */
+    margin: 20px 0; /* Space around the container */
+}
+figure {
+  text-align: center;
+  justify-content: center;
+  margin: 0; /* Remove default margin */
+}
+figcaption {
+  font-style: italic; /* Style the caption */
+  color: #555; /* Change the caption color */
+  margin-top: 5px; /* Space between the image and the caption */
+}
+
 </style>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Toggle the collapsible content visibility
+  document.querySelector('.collapsible-toggle').addEventListener('click', function() {
+    var content = document.querySelector('.collapsible-content');
+    var icon = document.querySelector('.collapsible-icon');
+    if (content.style.display === 'none') {
+      content.style.display = 'block';
+      icon.textContent = '▼';
+    } else {
+      content.style.display = 'none';
+      icon.textContent = '▶';
+    }
+  });
+});
+
+
+  // Function to fetch and display audio samples
+  async function loadAudioSamples() {
+  try {
+    const response = await fetch('{{ site.baseurl }}/assets/audio-files.json');
+    const data = await response.json();
+
+    const container = document.getElementById('audio-samples-container');
+    
+    for (const [category, files] of Object.entries(data)) {
+      const section = document.createElement('div');
+      section.className = 'audio-container';
+
+      const header = document.createElement('h4');
+      header.innerText = category.replace(/_/g, ' ').toUpperCase();
+      section.appendChild(header);
+
+      files.forEach(file => {
+        const pair = document.createElement('div');
+        pair.className = 'audio-pair';
+
+        const noisyAudio = document.createElement('div');
+        noisyAudio.className = 'audio-item';
+        noisyAudio.innerHTML = `<audio controls>
+          <source src="{{ site.baseurl }}/assets/audio/noisy/${file}" type="audio/wav">
+          Your browser does not support the audio element.
+        </audio>`;
+        pair.appendChild(noisyAudio);
+
+        const cleanAudio = document.createElement('div');
+        cleanAudio.className = 'audio-item';
+        cleanAudio.innerHTML = `<audio controls>
+          <source src="{{ site.baseurl }}/assets/audio/clean/${file}" type="audio/wav">
+          Your browser does not support the audio element.
+        </audio>`;
+        pair.appendChild(cleanAudio);
+
+        const generatedAudio = document.createElement('div');
+        generatedAudio.className = 'audio-item';
+        generatedAudio.innerHTML = `<audio controls>
+          <source src="{{ site.baseurl }}/assets/audio/generated/${file}" type="audio/wav">
+          Your browser does not support the audio element.
+        </audio>`;
+        pair.appendChild(generatedAudio);
+
+        section.appendChild(pair);
+      });
+
+      container.appendChild(section);
+    }
+  } catch (error) {
+    console.error('Error loading audio samples:', error);
+  }
+}
+
+// Initialize audio samples on page load
+document.addEventListener('DOMContentLoaded', loadAudioSamples);
+</script>

@@ -1,0 +1,19 @@
+{
+    "public_space_noise": [
+      "public_space_8.wav",
+      "public_space_7.wav",
+      "public_space_6.wav"
+    ],
+    "office_noise": [
+      "office_noise_1.wav",
+      "office_noise_4.wav",
+      "office_noise_2.wav",
+      "office_noise_3.wav"
+    ],
+    "music_noise": [
+      "music_3.wav",
+      "music_4.wav",
+      "music_2.wav"
+    ]
+  }
+  
