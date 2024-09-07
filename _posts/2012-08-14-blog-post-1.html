@@ -14,6 +14,8 @@ noise from audio signals, enhancing the clarity and quality of speech. We have t
 several noise conditions, demonstrating its effectiveness across different environments."
 ---
 
+<body>
+
 {% include toc %}
 
 <h2>About This Article</h2>
@@ -616,13 +618,10 @@ figcaption {
 </style>
 
 <script>
-  // Define the base URL globally
-  const baseUrl = '{{ site.baseurl }}';
-
   // Function to fetch and display audio samples
   async function loadAudioSamples() {
     try {
-      const response = await fetch(`${baseUrl}/assets/audio-files.json`);
+      const response = await fetch(`/assets/audio-files.json`);
       const data = await response.json();
 
       const container = document.getElementById('audio-samples-container');
@@ -642,7 +641,7 @@ figcaption {
           const noisyAudio = document.createElement('div');
           noisyAudio.className = 'audio-item';
           noisyAudio.innerHTML = `<audio controls>
-            <source src="${baseUrl}/assets/audio/noisy/${file}" type="audio/wav">
+            <source src="/assets/audio/noisy/${file}" type="audio/wav">
             Your browser does not support the audio element.
           </audio>`;
           pair.appendChild(noisyAudio);
@@ -650,7 +649,7 @@ figcaption {
           const cleanAudio = document.createElement('div');
           cleanAudio.className = 'audio-item';
           cleanAudio.innerHTML = `<audio controls>
-            <source src="${baseUrl}/assets/audio/clean/${file}" type="audio/wav">
+            <source src="/assets/audio/clean/${file}" type="audio/wav">
             Your browser does not support the audio element.
           </audio>`;
           pair.appendChild(cleanAudio);
@@ -658,7 +657,7 @@ figcaption {
           const generatedAudio = document.createElement('div');
           generatedAudio.className = 'audio-item';
           generatedAudio.innerHTML = `<audio controls>
-            <source src="${baseUrl}/assets/audio/generated/${file}" type="audio/wav">
+            <source src="/assets/audio/generated/${file}" type="audio/wav">
             Your browser does not support the audio element.
           </audio>`;
           pair.appendChild(generatedAudio);
