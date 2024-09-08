@@ -612,6 +612,67 @@ figcaption {
   margin-top: 5px; /* Space between the image and the caption */
 }
 
+.toc-container {
+    background-color: #f7f7f7;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 5px;
+  }
+  
+  .toc-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .toc-icon {
+    margin-right: 5px;
+  }
+  
+  .toc-content {
+    margin-top: 10px;
+  }
+  
+  .toc-content ul {
+    list-style-type: disc;
+    padding-left: 50px;
+    padding-top: 0px;
+    margin-bottom: 5px; /* Remove margin between <ul> elements */
+    padding-bottom: 0; /* Remove extra padding */
+  }
+  
+  .toc-content ul ul {
+    list-style-type: circle;
+    padding-left: 20px;
+    margin-top: 15px;
+    margin-bottom: 0; /* Remove margin between <ul> elements */
+    padding-bottom: 0; /* Remove extra padding */
+  }
+
+  .toc-content li {
+    margin-bottom: 10px; /* Reduce space between <li> items */
+    line-height: 0.6; /* Reduce line-height to compress vertical spacing */
+  }
+
+  #toc-list {
+  padding-left: 0;
+  margin: 0;
+  }
+
+  #toc-list a {
+  text-decoration: none; /* Remove underline */
+  color: inherit; /* Inherit color from parent or set specific color */
+  font-size: 16px;
+  }
+
+  #toc-list a:hover {
+    text-decoration: none; /* Ensure no underline on hover */
+    text-decoration: underline;
+  }
+
 </style>
 
 <script>
