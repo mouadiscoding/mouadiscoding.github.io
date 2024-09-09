@@ -19,16 +19,15 @@ several noise conditions, demonstrating its effectiveness across different envir
 <h2>About This Article</h2>
 
 <div class="project-description">
-  <p>This article introduces a <strong>Deep Generative Speech Enhancement model</strong>  that utilizes a hybrid architecture combining the 
-    <em>U-Net Architecture</em> and <em>Transformers</em>. The model is trained in a supervized manner to remove various types of 
+  <p><Strong>TL;DR: </Strong>This article introduces a <strong>Deep Generative Speech Enhancement model</strong> that utilizes a hybrid architecture combining the 
+    <em>U-Net Architecture</em> and <em>Transformers</em>. The model, CleanUNet, 
+    operates on raw waveforms and uses causal convolutions for real-time applications. It refines speech using a multi-resolution STFT loss, 
+    targeting both high and low frequencies. The model was trained on the VoiceBank + Demand dataset and outperforms
+    other state-of-the-art models in benchmark tests. Detailed sections include model architecture, training setup, loss functions, and evaluation. <br>
+    The model is trained in a supervized manner to remove various types of 
     noise from audio signals, enhancing the clarity and quality of speech. We have tested the model on 
-    several noise conditions, demonstrating its effectiveness across different environments.</p>
-  <p>
-    Kicking things off with some audio samples, including noisy, clean, and generated examples. 
-    Then we get into the nuts and bolts of the model's architecture and the foundational paper used in its development.
-    Additionally, we discuss the training setup and loss function used before evaluating the model across various benchmarks and comparing
-    the obtained results with the most advanced state-of-the-art solutions, proving how the model excels at the task of Speech Enhancement. <br>
-    You can find the implementation from scratch using <strong>Pytorch</strong> <a href="https://github.com/mouadiscoding/speech_enhancement">Here</a>.
+    several noise conditions, demonstrating its effectiveness across different environments. <br>
+    You can find the implementation from scratch using <strong>PyTorch</strong> <a href="https://github.com/mouadiscoding/speech_enhancement">Here</a>.
   </p>
 
 </div>

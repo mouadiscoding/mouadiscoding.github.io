@@ -1,4 +1,3 @@
-console.log("Saad Sexy")
 document.addEventListener('DOMContentLoaded', function() {
     // Function to create TOC
     function createTOC() {
