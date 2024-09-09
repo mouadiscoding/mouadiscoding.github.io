@@ -21,7 +21,7 @@ repository               : "mouadiscoding/mouadiscoding.github.io"
 #               Additional customization can be done by editing /_includes/author-profile.html
 author:
   # Biographic information
-  avatar           : "profile.png"
+  avatar           : "taleb_mouad.jpg"
   name             : "Mouad Taleb"
   pronouns         : # he/him  
   bio              : "Data Scientist | ML Engineer | Software Engineer"
